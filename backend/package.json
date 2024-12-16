@@ -9,8 +9,16 @@
   "author": "Rajamohan R",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1",
-    "mongoose": "^5.12.3",
-    "web3": "^1.3.5"
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^5.13.22",
+    "solc": "^0.8.28",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "web3": "^1.10.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }
