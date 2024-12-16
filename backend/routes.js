@@ -56,20 +56,20 @@ router.post('/transactions', async (req, res) => {
         // Save to database
         await transaction.save();
 
-        // Log to blockchain if suspicious (assuming flagged value is true for demo purposes)
-        // In a real case, the fraud flag should be determined by AI model
-        // if (true) { // Replace this with the actual fraud flag when it's available
-        //     await BlockchainService.addTransaction(
-        //         user, 
-        //         amount, 
-        //         senderOldBalance,
-        //         senderNewBalance,
-        //         receiverOldBalance,
-        //         receiverNewBalance,
-        //         transactionType,  
-        //         true // Assuming the transaction is flagged as suspicious for this demo
-        //     );
-        // }
+        //Log to blockchain if suspicious (assuming flagged value is true for demo purposes)
+        //In a real case, the fraud flag should be determined by AI model
+        if (true) { // Replace this with the actual fraud flag when it's available
+            await BlockchainService.addTransaction(
+                user, 
+                amount, 
+                senderOldBalance,
+                senderNewBalance,
+                receiverOldBalance,
+                receiverNewBalance,
+                transactionType,  
+                true // Assuming the transaction is flagged as suspicious for this demo
+            );
+        }
 
         res.status(200).json({
             transaction // The transaction data returned from the database

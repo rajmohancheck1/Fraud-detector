@@ -1,83 +1,65 @@
-# ai-models/predictAPI.py
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-import sys
-import os
+import tensorflow as tf
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+import pickle
 
-# Add project root to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from advancedFraudDetector import AdvancedFraudDetector
-
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
 
-# Load pre-trained model
-try:
-    fraud_detector = AdvancedFraudDetector.load_model()
-except FileNotFoundError:
-    print("No pre-trained model found. Train the model first.")
-    fraud_detector = None
+# Load the model
+model_path = "fraud_detection_model.h5"
+model = tf.keras.models.load_model(model_path)
+
+# Load the OneHotEncoder (fit it once during training)
+with open('encoder.pkl', 'rb') as f:
+    encoder = pickle.load(f)
+
+# Preprocessing function
+def preprocess_single_record(record):
+    """Preprocesses a single transaction record to match the model's expected format."""
+    # Convert the record to a DataFrame
+    record_df = pd.DataFrame([record])
+
+    # Select numeric features
+    numeric_features = record_df[['amount', 'oldbalanceOrg', 'newbalanceOrig', 'oldbalanceDest', 'newbalanceDest']]
+
+    # One-hot encode the 'type' column using pre-fitted encoder
+    type_encoded = encoder.transform(record_df[['type']]).toarray()
+
+    # Combine numeric features with encoded features
+    processed_data = np.concatenate([type_encoded, numeric_features], axis=1)
+
+    return processed_data  # Return as a 2D array
 
 @app.route('/predict', methods=['POST'])
-def predict_fraud():
-    if fraud_detector is None:
-        return jsonify({
-            'error': 'Model not trained',
-            'status': 'Train the model first'
-        }), 400
-    
-    try:
-        # Extract transaction details
-        data = request.json
-        transaction_features = [
-            data.get('amount', 0),
-            data.get('transaction_hour', 0),
-            data.get('is_international', 0),
-            data.get('merchant_category', 'unknown')
-        ]
-        
-        # Predict fraud
-        prediction = fraud_detector.predict(transaction_features)
-        
-        return jsonify({
-            'fraud_probability': prediction['fraud_probability'],
-            'is_fraudulent': prediction['is_fraudulent']
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'status': 'Prediction failed'
-        }), 500
+def predict():
+    # Get JSON data from request
+    data = request.get_json()
 
-@app.route('/train', methods=['POST'])
-def train_model():
+    # Validate input
+    required_fields = ['type', 'amount', 'oldbalanceOrg', 'newbalanceOrig', 'oldbalanceDest', 'newbalanceDest']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': f'Missing required fields. Required: {required_fields}'}), 400
+
     try:
-        # Get training data path from request
-        data_path = request.json.get('data_path')
-        
-        if not data_path:
-            return jsonify({
-                'error': 'No data path provided',
-                'status': 'Training failed'
-            }), 400
-        
-        # Train new model
-        detector = AdvancedFraudDetector()
-        detector.train(data_path)
-        detector.save_model()
-        
-        return jsonify({
-            'status': 'Model trained successfully',
-            'model_path': 'fraud_model.joblib'
-        })
-    
+        # Preprocess the single record
+        features = preprocess_single_record(data)
+
+        # Make prediction
+        prediction = model.predict(features)[0]
+
+        # Prepare response
+        result = {
+            'fraud_probability': float(prediction[0]),
+            'is_fraud': bool(prediction[0] > 0.5)
+        }
+
+        return jsonify(result)
+
     except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'status': 'Training failed'
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True)

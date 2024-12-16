@@ -14,6 +14,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mongoose": "^5.13.22",
+    "nodemailer": "^6.9.16",
     "solc": "^0.8.28",
     "truffle-hdwallet-provider": "^1.0.17",
     "web3": "^1.10.4"

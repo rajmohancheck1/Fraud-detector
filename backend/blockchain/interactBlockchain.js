@@ -30,15 +30,29 @@ async function addTransaction(user, amount, isValid) {
 
     }
 }
-
-// Get all transactions from the blockchain
 async function getAllTransactions() {
     try {
-        const transactions = await contract.methods.getTransactions().call(); // Get all transactions from the smart contract
-        return transactions; // Return the list of transactions
+        const accounts = await web3.eth.getAccounts();
+        
+        // Use .call() with a specific account
+        const transactionsLength = await contract.methods.transactionCounter().call();
+        console.log('Total transactions:', transactionsLength);
+
+        // Fetch transactions individually
+        const transactions = [];
+        for (let i = 0; i < transactionsLength; i++) {
+            try {
+                const transaction = await contract.methods.transactions(i).call();
+                transactions.push(transaction);
+            } catch (error) {
+                console.error(`Error fetching transaction ${i}:`, error);
+            }
+        }
+
+        return transactions;
     } catch (error) {
-        console.error('Error fetching transactions from blockchain:', error);
-        throw error; // Propagate error for further handling
+        console.error('Detailed blockchain transactions fetch error:', error);
+        throw error;
     }
 }
 
