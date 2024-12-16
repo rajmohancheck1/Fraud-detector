@@ -6,9 +6,11 @@ function TransactionForm() {
     const [transaction, setTransaction] = useState({
         user: '',
         amount: '',
-        cardNumber: '',
+        senderOldBalance: '',
+        senderNewBalance: '',
+        receiverOldBalance: '',
+        receiverNewBalance: '',
         transactionType: '',
-        location: ''
     });
     const [fraudPrediction, setFraudPrediction] = useState(null);
     const [error, setError] = useState(null);
@@ -25,18 +27,28 @@ function TransactionForm() {
         e.preventDefault();
         setError(null);
         setFraudPrediction(null);
-
+    
         try {
-            // Submit transaction and get fraud prediction
-            const response = await axios.post('/api/transactions', transaction);
-            
-            setFraudPrediction({
-                fraudProbability: response.data.transaction.fraudProbability,
-                flagged: response.data.transaction.flagged
-            });
+            console.log('Submitting transaction:', transaction);
+    
+            const response =  await axios.post('http://localhost:3000/api/transactions', transaction);
 
+    
+            console.log('Server response:', response.data);
+    
+            const transactionData = response.data.transaction;
+    
+            setFraudPrediction({
+                fraudProbability: transactionData?.fraudProbability || 0, // Default to 0 if not provided
+                flagged: transactionData?.flagged || false // Default to false if not provided
+            });
         } catch (error) {
-            setError(error.response?.data?.error || 'Transaction submission failed');
+            console.error('Error submitting transaction:', error);
+            setError(
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                'Transaction submission failed. Please check your input or try again later.'
+            );
         }
     };
 
@@ -60,10 +72,35 @@ function TransactionForm() {
                     required
                 />
                 <input
-                    name="cardNumber"
-                    value={transaction.cardNumber}
+                    name="senderOldBalance"
+                    type="number"
+                    value={transaction.senderOldBalance}
                     onChange={handleChange}
-                    placeholder="Card Number"
+                    placeholder="Sender Old Balance"
+                    required
+                />
+                <input
+                    name="senderNewBalance"
+                    type="number"
+                    value={transaction.senderNewBalance}
+                    onChange={handleChange}
+                    placeholder="Sender New Balance"
+                    required
+                />
+                <input
+                    name="receiverOldBalance"
+                    type="number"
+                    value={transaction.receiverOldBalance}
+                    onChange={handleChange}
+                    placeholder="Receiver Old Balance"
+                    required
+                />
+                <input
+                    name="receiverNewBalance"
+                    type="number"
+                    value={transaction.receiverNewBalance}
+                    onChange={handleChange}
+                    placeholder="Receiver New Balance"
                     required
                 />
                 <select
@@ -73,22 +110,18 @@ function TransactionForm() {
                     required
                 >
                     <option value="">Select Transaction Type</option>
-                    <option value="online">Online</option>
-                    <option value="pos">Point of Sale</option>
-                    <option value="international">International</option>
+                    <option value="Payment">Payment</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Debit">Debit</option>
+                    <option value="CashOut">CashOut</option>
+                    <option value="CashIn">CashIn</option>
                 </select>
-                <input
-                    name="location"
-                    value={transaction.location}
-                    onChange={handleChange}
-                    placeholder="Transaction Location"
-                />
                 <button type="submit">Submit Transaction</button>
             </form>
 
             {error && (
                 <div className="error-message">
-                    {error}
+                    <strong>Error:</strong> {error}
                 </div>
             )}
 
