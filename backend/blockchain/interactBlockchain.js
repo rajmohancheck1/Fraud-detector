@@ -1,50 +1,61 @@
 const Web3 = require('web3');
-const HDWalletProvider = require('@truffle/hdwallet-provider');
-const contractABI = require('./FraudDetection.json').abi;
-const contractBytecode = require('./FraudDetection.json').bytecode;
 
-// Use environment variables or secure key management
-const privateKey = process.env.PRIVATE_KEY || "9a5b22c6fb53dd643d09c3791d2782e6a2db3cc97329a4c161558e2476408449";
-const infuraUrl = `https://eth-mainnet.alchemyapi.io/v2/${process.env.INFURA_PROJECT_ID || 'XboeS8oCh-ZgfbfRMYaQFt_Q1NRWHkPX'}`;
+// Use the local Ganache instance (adjust the URL if needed)
+const web3 = new Web3('http://localhost:8545'); // URL for Ganache
 
-const provider = new HDWalletProvider(
-  privateKey,
-  infuraUrl
-);
+// ABI and contract address (replace with actual deployed contract address)
+const contractABI = require('./FraudDetection.json');
+const contractAddress = '0x45A55d0ED671fD284Ba63725DfbC1ff7Fa1aCbda'; // Replace with actual address
 
-const web3 = new Web3(provider);
+// Create contract instance
+const contract = new web3.eth.Contract(contractABI, contractAddress);
 
-async function deployContract() {
+// Add a new transaction to the blockchain
+async function addTransaction(user, amount, isValid) {
     try {
         const accounts = await web3.eth.getAccounts();
         
-        // Ensure you have an account
         if (accounts.length === 0) {
             throw new Error('No accounts found');
         }
 
-        const contract = new web3.eth.Contract(contractABI);
-  
-        const deployedContract = await contract
-            .deploy({ 
-                data: contractBytecode,
-                arguments: [] // Add constructor arguments if any
-            })
-            .send({ 
-                from: accounts[0], 
-                gas: 1500000,
-                gasPrice: await web3.eth.getGasPrice()
-            });
-      
-        console.log('Contract deployed at:', deployedContract.options.address);
-        return deployedContract;
-    } catch (err) {
-        console.error('Deployment error:', err);
-        throw err; // Re-throw to allow caller to handle
-    } finally {
-        // Always close the provider to prevent hanging
-        provider.engine.stop();
+        const receipt = await contract.methods
+            .addTransaction(user, amount, isValid) // Call the addTransaction method in the smart contract
+            .send({ from: accounts[0], gas: 1500000, gasPrice: await web3.eth.getGasPrice() });
+        
+        console.log('Transaction added to blockchain:', receipt);
+    } catch (error) {
+        console.error('Error adding transaction to blockchain:', error);
+        throw error; // Propagate error for further handling
+
     }
 }
-  
-module.exports = { deployContract };
+
+// Get all transactions from the blockchain
+async function getAllTransactions() {
+    try {
+        const transactions = await contract.methods.getTransactions().call(); // Get all transactions from the smart contract
+        return transactions; // Return the list of transactions
+    } catch (error) {
+        console.error('Error fetching transactions from blockchain:', error);
+        throw error; // Propagate error for further handling
+    }
+}
+
+async function getTransactionsByBlockNumber(blockNumber) {
+    try {
+        // Fetch the block details using the block number
+        const block = await web3.eth.getBlock(blockNumber, true); // 'true' includes transaction data
+        
+        if (!block || !block.transactions) {
+            throw new Error(`No transactions found for block number ${blockNumber}`);
+        }
+
+        return block.transactions; // Return the list of transactions in the block
+    } catch (error) {
+        console.error('Error fetching transactions by block number:', error);
+        throw error; // Propagate error for further handling
+    }
+}
+
+module.exports = { addTransaction, getAllTransactions,getTransactionsByBlockNumber };
